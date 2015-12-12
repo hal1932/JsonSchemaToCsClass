@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JsonSchemaToCsClass
 {
@@ -23,11 +19,11 @@ namespace JsonSchemaToCsClass
             generator.ConstructDeclaration(option);
             Console.WriteLine(generator.ToFullString());
 
-            Console.WriteLine("=============================");
+            //Console.WriteLine("=============================");
 
-            option.IsJsonSerializable = true;
-            generator.ConstructDeclaration(option);
-            Console.WriteLine(generator.ToFullString());
+            //option.IsJsonSerializable = true;
+            //generator.ConstructDeclaration(option);
+            //Console.WriteLine(generator.ToFullString());
 
             Console.Read();
         }

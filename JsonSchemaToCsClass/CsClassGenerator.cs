@@ -7,8 +7,6 @@ using Newtonsoft.Json.Schema;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 using SF = Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
@@ -108,10 +106,10 @@ namespace JsonSchemaToCsClass
                     node = node.WithLeadingTrivia(comment.ConstructTriviaList());
                 }
 
-                var props = new List<PropertyDeclarationSyntax>();
+                var props = new List<MemberDeclarationSyntax>();
                 foreach (var member in symbol.Members)
                 {
-                    props.Add(ConstructImpl(member) as PropertyDeclarationSyntax);
+                    props.Add(ConstructImpl(member) as MemberDeclarationSyntax);
                 }
                 return node.AddMembers(props.ToArray());
             }
