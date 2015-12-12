@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace JsonSchemaToCsClass
 {
@@ -50,6 +51,30 @@ namespace JsonSchemaToCsClass
         public bool isNullable
         {
             get; set;
+        }
+
+        public SymbolData Parent
+        {
+            get; private set;
+        }
+
+        public SymbolData(SymbolData parent)
+        {
+            Parent = parent;
+        }
+
+        public SymbolData CreateInstanceSymbol()
+        {
+            return new SymbolData(Parent)
+            {
+                TypeName = Name.ToClassName(),
+                Name = Name,
+                Summary = Summary,
+                IsArray = IsArray,
+                Modifier = Modifier,
+                IsRequired = IsRequired,
+                isNullable = isNullable,
+            };
         }
     }
 }

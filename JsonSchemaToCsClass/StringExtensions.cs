@@ -4,6 +4,11 @@ namespace JsonSchemaToCsClass
 {
     internal static class StringExtensions
     {
+        public static string ToClassName(this string str)
+        {
+            return str.ToCamelCase() + "Class";
+        }
+
         public static string ToCamelCase(this string str)
         {
             return string.Join("",
