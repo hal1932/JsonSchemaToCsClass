@@ -75,9 +75,17 @@ namespace JsonSchemaToCsClass
             }
             node.TypeName = types.First();
 
+            if (node.TypeName == "array")
+            {
+                node.IsArray = true;
+                node.TypeName = rawSchema.Items.First().Type?.ToString()
+                    .Split(',')
+                    .Select(item => item.ToLower().Trim())
+                    .First();
+            }
+
             node.Name = name;
             node.Summary = rawSchema.Description;
-            node.IsArray = (node.TypeName == "array");
             node.Modifier = SymbolData.AccessModifier.Public;
             node.IsRequired = isRequired;
 
@@ -97,54 +105,64 @@ namespace JsonSchemaToCsClass
 
         private CSharpSyntaxNode ConstructImpl(SymbolData symbol)
         {
-            if (symbol.TypeName == "object")
+            if (symbol.IsArray)
             {
-                var className = symbol.Name.ToClassName();
-                var node = SF.ClassDeclaration(className)
-                    .AddModifiers(SF.Token(SyntaxKind.PublicKeyword));
-
-                if (!string.IsNullOrEmpty(symbol.Summary))
-                {
-                    var comment = new DocumentComment() { Summary = symbol.Summary };
-                    node = node.WithLeadingTrivia(comment.ConstructTriviaList());
-                }
-
-                var props = new List<MemberDeclarationSyntax>();
-                foreach (var member in symbol.Members)
-                {
-                    props.Add(ConstructImpl(member) as MemberDeclarationSyntax);
-                    if (member.TypeName == "object")
-                    {
-                        var childSymbol = member.CreateInstanceSymbol();
-                        props.Add(CreateProperty(childSymbol));
-                    }
-                }
-                return node.AddMembers(props.ToArray());
-            }
-            else if (symbol.TypeName == "array")
-            {
-                throw new NotImplementedException();
+                return CreateArray(symbol);
             }
             else
             {
-                return CreateProperty(symbol);
+                switch (symbol.TypeName)
+                {
+                    case "object": return CreateClass(symbol);
+                    default: return CreateProperty(symbol);
+                }
             }
+        }
+
+        private ClassDeclarationSyntax CreateClass(SymbolData symbol)
+        {
+            var className = symbol.Name.ToClassName();
+            var node = SF.ClassDeclaration(className)
+                .AddModifiers(SF.Token(SyntaxKind.PublicKeyword));
+
+            if (!string.IsNullOrEmpty(symbol.Summary))
+            {
+                var comment = new DocumentComment() { Summary = symbol.Summary };
+                node = node.WithLeadingTrivia(comment.ConstructTriviaList());
+            }
+
+            var props = new List<MemberDeclarationSyntax>();
+            foreach (var member in symbol.Members)
+            {
+                props.Add(ConstructImpl(member) as MemberDeclarationSyntax);
+                if (member.TypeName == "object")
+                {
+                    var childSymbol = member.CreateInstanceSymbol();
+                    props.Add(CreateProperty(childSymbol));
+                }
+            }
+            return node.AddMembers(props.ToArray());
+        }
+
+        private PropertyDeclarationSyntax CreateArray(SymbolData symbol)
+        {
+            var type = SF.ArrayType(
+                SF.ParseTypeName(SymbolTypeConverter.Convert(symbol.TypeName)),
+                SF.List(new ArrayRankSpecifierSyntax[]
+                {
+                    SF.ArrayRankSpecifier(),
+                }));
+            return CreatePropertyImpl(type, symbol);
         }
 
         private PropertyDeclarationSyntax CreateProperty(SymbolData symbol)
         {
             var type = SF.ParseTypeName(SymbolTypeConverter.Convert(symbol.TypeName));
+            return CreatePropertyImpl(type, symbol);
+        }
 
-            string requiredValueName;
-            if (symbol.IsRequired)
-            {
-                requiredValueName = (symbol.isNullable) ? "AllowNull" : "Always";
-            }
-            else
-            {
-                requiredValueName = "Default";
-            }
-
+        private PropertyDeclarationSyntax CreatePropertyImpl(TypeSyntax type, SymbolData symbol)
+        {
             var node = SF.PropertyDeclaration(type, symbol.Name)
                 .AddModifiers(SF.Token(SyntaxKind.PublicKeyword))
                 .AddAccessorListAccessors(
@@ -155,24 +173,7 @@ namespace JsonSchemaToCsClass
 
             if (_options.IsJsonSerializable)
             {
-                node = node.WithAttributeLists(
-                    SF.SingletonList(
-                        SF.AttributeList(
-                            SF.SingletonSeparatedList(
-                                SF.Attribute(SF.IdentifierName("JsonProperty"))
-                                    .WithArgumentList(
-                                        SF.AttributeArgumentList(
-                                            SF.SeparatedList(new[]
-                                            {
-                                                    SF.AttributeArgument(
-                                                        SF.MemberAccessExpression(
-                                                            SyntaxKind.SimpleMemberAccessExpression,
-                                                            SF.IdentifierName("Required"),
-                                                            SF.Token(SyntaxKind.DotToken),
-                                                            SF.IdentifierName(requiredValueName)))
-                                                        .WithNameEquals(
-                                                            SF.NameEquals(SF.IdentifierName("Required"))),
-                                            })))))));
+                node = node.WithAttributeLists(CreateSerializationAttribute(symbol));
             }
 
             if (!string.IsNullOrEmpty(symbol.Summary))
@@ -182,6 +183,37 @@ namespace JsonSchemaToCsClass
             }
 
             return node;
+        }
+
+        private SyntaxList<AttributeListSyntax> CreateSerializationAttribute(SymbolData symbol)
+        {
+            string requiredValueName;
+            if (symbol.IsRequired)
+            {
+                requiredValueName = (symbol.isNullable) ? "AllowNull" : "Always";
+            }
+            else
+            {
+                requiredValueName = "Default";
+            }
+
+            return SF.SingletonList(
+                SF.AttributeList(
+                    SF.SingletonSeparatedList(
+                        SF.Attribute(SF.IdentifierName("JsonProperty"))
+                            .WithArgumentList(
+                                SF.AttributeArgumentList(
+                                    SF.SeparatedList(new[]
+                                    {
+                                        SF.AttributeArgument(
+                                            SF.MemberAccessExpression(
+                                                SyntaxKind.SimpleMemberAccessExpression,
+                                                SF.IdentifierName("Required"),
+                                                SF.Token(SyntaxKind.DotToken),
+                                                SF.IdentifierName(requiredValueName)))
+                                            .WithNameEquals(
+                                                SF.NameEquals(SF.IdentifierName("Required"))),
+                                    }))))));
         }
 
         private ClassConstructionOptions _options;

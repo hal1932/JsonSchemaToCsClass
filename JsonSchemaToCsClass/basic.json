@@ -21,6 +21,13 @@
         "id": {
           "type": "integer",
           "description": "test id"
+        },
+        "data": {
+          "type": "array",
+          "description": "test array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     }
