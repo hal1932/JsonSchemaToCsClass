@@ -19,11 +19,11 @@ namespace JsonSchemaToCsClass
             generator.ConstructDeclaration(option);
             Console.WriteLine(generator.ToFullString());
 
-            //Console.WriteLine("=============================");
+            Console.WriteLine("=============================");
 
-            //option.IsJsonSerializable = true;
-            //generator.ConstructDeclaration(option);
-            //Console.WriteLine(generator.ToFullString());
+            option.IsJsonSerializable = true;
+            generator.ConstructDeclaration(option);
+            Console.WriteLine(generator.ToFullString());
 
             Console.Read();
         }

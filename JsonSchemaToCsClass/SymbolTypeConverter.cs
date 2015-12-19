@@ -4,21 +4,18 @@ namespace JsonSchemaToCsClass
 {
     internal static class SymbolTypeConverter
     {
-        public static string Convert(string symbolType)
+        public static string Convert(SymbolData symbol)
         {
-            switch (symbolType)
+            var nullable = (symbol.isNullable || !symbol.IsRequired && !symbol.isNullable);
+            switch (symbol.TypeName)
             {
-                case "integer": return "int";
-                case "number": return "double";
-                case "boolean": return "bool";
+                case "integer": return (nullable) ? "int?" : "int";
+                case "number": return (nullable) ? "double?" : "double";
+                case "boolean": return (nullable) ? "bool?" : "bool";
+                case "datetime": return (nullable) ? "DateTime?" : "DateTime";
                 case "any": return "object";
-                default: return symbolType;
+                default: return symbol.TypeName;
             }
-        }
-
-        public static string ConvertBack(string csType)
-        {
-            throw new NotImplementedException();
         }
     }
 }

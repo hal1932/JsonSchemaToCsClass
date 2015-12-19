@@ -75,6 +75,17 @@ namespace JsonSchemaToCsClass
             }
             node.TypeName = types.First();
 
+            if (node.TypeName == "string" && !string.IsNullOrEmpty(rawSchema.Format))
+            {
+                // http://json-schema.org/latest/json-schema-validation.html#anchor104
+                switch (rawSchema.Format)
+                {
+                    case "date-time": node.TypeName = "datetime"; break;
+                    default:
+                        throw new ArgumentException("not-supported string format");
+                }
+            }
+
             if (node.TypeName == "array")
             {
                 node.IsArray = true;
@@ -147,7 +158,7 @@ namespace JsonSchemaToCsClass
         private PropertyDeclarationSyntax CreateArray(SymbolData symbol)
         {
             var type = SF.ArrayType(
-                SF.ParseTypeName(SymbolTypeConverter.Convert(symbol.TypeName)),
+                SF.ParseTypeName(SymbolTypeConverter.Convert(symbol)),
                 SF.List(new ArrayRankSpecifierSyntax[]
                 {
                     SF.ArrayRankSpecifier(),
@@ -157,12 +168,13 @@ namespace JsonSchemaToCsClass
 
         private PropertyDeclarationSyntax CreateProperty(SymbolData symbol)
         {
-            var type = SF.ParseTypeName(SymbolTypeConverter.Convert(symbol.TypeName));
+            var type = SF.ParseTypeName(SymbolTypeConverter.Convert(symbol));
             return CreatePropertyImpl(type, symbol);
         }
 
         private PropertyDeclarationSyntax CreatePropertyImpl(TypeSyntax type, SymbolData symbol)
         {
+            // public [type] [symbol.Name] { get; set; }
             var node = SF.PropertyDeclaration(type, symbol.Name)
                 .AddModifiers(SF.Token(SyntaxKind.PublicKeyword))
                 .AddAccessorListAccessors(
@@ -197,23 +209,38 @@ namespace JsonSchemaToCsClass
                 requiredValueName = "Default";
             }
 
+            Func<string, string, string, AttributeArgumentSyntax> createAttr =
+                (lhs, expr, name) =>
+                {
+                    // lhs = expr.name
+                    return SF.AttributeArgument(
+                        SF.MemberAccessExpression(
+                            SyntaxKind.SimpleMemberAccessExpression,
+                            SF.IdentifierName(expr),
+                            SF.Token(SyntaxKind.DotToken),
+                            SF.IdentifierName(name)))
+                        .WithNameEquals(
+                            SF.NameEquals(SF.IdentifierName(lhs)));
+                };
+
+            var attributes = SF.SeparatedList(new[]
+            {
+                // Required = Required.[requiredValueName]
+                createAttr("Required", "Required", requiredValueName),
+            });
+            if (requiredValueName == "Default" && !symbol.isNullable)
+            {
+                // NullValueHandling = NullValueHandling.Ignore
+                attributes = attributes.Add(
+                    createAttr("NullValueHandling", "NullValueHandling", "Ignore"));
+            }
+
             return SF.SingletonList(
                 SF.AttributeList(
                     SF.SingletonSeparatedList(
                         SF.Attribute(SF.IdentifierName("JsonProperty"))
                             .WithArgumentList(
-                                SF.AttributeArgumentList(
-                                    SF.SeparatedList(new[]
-                                    {
-                                        SF.AttributeArgument(
-                                            SF.MemberAccessExpression(
-                                                SyntaxKind.SimpleMemberAccessExpression,
-                                                SF.IdentifierName("Required"),
-                                                SF.Token(SyntaxKind.DotToken),
-                                                SF.IdentifierName(requiredValueName)))
-                                            .WithNameEquals(
-                                                SF.NameEquals(SF.IdentifierName("Required"))),
-                                    }))))));
+                                SF.AttributeArgumentList(attributes)))));
         }
 
         private ClassConstructionOptions _options;

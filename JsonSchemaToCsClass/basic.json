@@ -4,7 +4,7 @@
   "type": "object",
   "properties": {
     "firstName": {
-      "type": [ "string", "integer" ]
+      "type": [ "string" ]
     },
     "lastName": {
       "type": [ "string", "null" ]
@@ -13,6 +13,10 @@
       "description": "Age in years",
       "type": "integer",
       "minimum": 0
+    },
+    "birthday": {
+      "type": "string",
+      "format": "date-time"
     },
     "test": {
       "type": "object",
@@ -29,8 +33,9 @@
             "type": "string"
           }
         }
-      }
+      },
+      "required": [ "id" ]
     }
   },
-  "required": [ "firstName", "lastName" ]
+  "required": [ "firstName" ]
 }
