@@ -136,6 +136,15 @@ namespace JsonSchemaToCsClass
             var node = SF.ClassDeclaration(className)
                 .AddModifiers(SF.Token(SyntaxKind.PublicKeyword));
 
+            if (_options.IsJsonSerializable)
+            {
+                node = node.WithAttributeLists(
+                    SF.SingletonList(
+                        SF.AttributeList(
+                            SF.SingletonSeparatedList(
+                                SF.Attribute(SF.IdentifierName("JsonObject"))))));
+            }
+
             if (!string.IsNullOrEmpty(symbol.Summary))
             {
                 var comment = new DocumentComment() { Summary = symbol.Summary };
