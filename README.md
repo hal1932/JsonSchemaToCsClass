@@ -1,5 +1,5 @@
 # JsonSchemaToCsClass
-- Json文字列をC#のクラス定義に変換します。
+- Jsonスキーマの文字列からC#の構文木を生成し、C#のクラス定義として書き出します。
 
 - 変換元の例（basic.json）
 ```
