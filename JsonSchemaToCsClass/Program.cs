@@ -19,6 +19,9 @@ namespace JsonSchemaToCsClass
         {
             var schema = JsonSchema.Load("basic.json");
 
+            ///////////////////////////////////////////
+            // JSON を C# 定義に変換
+            ///////////////////////////////////////////
             var generator = new CsClassGenerator();
             generator.ParseSchema(schema);
 
@@ -30,6 +33,10 @@ namespace JsonSchemaToCsClass
             generator.ConstructDeclaration(option);
             Console.WriteLine(generator.ToFullString());
 
+
+            ///////////////////////////////////////////
+            // 変換した C# 定義を文字列化してビルドしてみる
+            ///////////////////////////////////////////
             var options = ScriptOptions.Default
                 .WithMetadataResolver(
                     ScriptMetadataResolver.Default
@@ -72,79 +79,6 @@ namespace JsonSchemaToCsClass
                 //var jsonStr = JsonConvert.SerializeObject(instance);
                 //Console.WriteLine(jsonStr);
             }
-#if false
-            Script<object> script = null;
-            DateTime begin;
-
-            var sourceCode = @"
-                using System;
-                using System.Collections.Generic;
-                public class TestData
-                {
-                    public int Item { get; set; }
-                }
-                var typeDic = new Dictionary<string, Type>()
-                {
-                    { ""TestData"", typeof(TestData) },
-                };
-                var types = System.Reflection.Assembly.GetExecutingAssembly().ExportedTypes;
-                return typeof(TestData);
-            ";
-
-            Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
-            Task.Factory.StartNew(() =>
-            {
-                begin = DateTime.Now;
-                script = CSharpScript.Create(sourceCode);
-                Console.WriteLine("create {0}", (DateTime.Now - begin).TotalMilliseconds);
-
-                Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
-                begin = DateTime.Now;
-                foreach (var diag in script.Compile())
-                {
-                    Console.WriteLine(diag);
-                }
-                Console.WriteLine("compile {0}", (DateTime.Now - begin).TotalMilliseconds);
-            }).Wait();
-
-            begin = DateTime.Now;
-            var state = script.RunAsync().Result;
-            Console.WriteLine("run {0}", (DateTime.Now - begin).TotalMilliseconds);
-
-            // 1. 返り値で受け取る
-            foreach (var prop in (state.ReturnValue as Type).GetProperties())
-            {
-                Console.WriteLine(prop.Name);
-            }
-
-            // 2. 変数にいれとく
-            var typeDic = state.Variables.First(v => v.Name == "typeDic").Value as Dictionary<string, Type>;
-            foreach (var item in typeDic)
-            {
-                foreach (var prop in item.Value.GetProperties())
-                {
-                    Console.WriteLine(prop.Name);
-                }
-            }
-
-            // 3. コンパイル結果をメモリ上に展開してアセンブリ生成
-            using (var stream = new MemoryStream())
-            {
-                begin = DateTime.Now;
-                if (script.GetCompilation().Emit(stream).Success)
-                {
-                    Console.WriteLine("emit {0}", (DateTime.Now - begin).TotalMilliseconds);
-                    begin = DateTime.Now;
-                    var asm = Assembly.Load(stream.GetBuffer());
-                    Console.WriteLine("load {0}", (DateTime.Now - begin).TotalMilliseconds);
-                    var type = asm.GetTypes().First(t => t.Name == "TestData");
-                    foreach (var prop in type.GetProperties())
-                    {
-                        Console.WriteLine(prop.Name);
-                    }
-                }
-            }
-#endif
 
             Console.Read();
         }
